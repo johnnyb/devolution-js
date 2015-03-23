@@ -1,3 +1,8 @@
+"use strict";
+
+/* Copyright 2015 The Blyth Institute */
+/* See LICENSE file for terms of use */
+
 InstructionSet.registerInstruction(new Instruction({
 	code: "one",
 	perform: function(organism, args) {
