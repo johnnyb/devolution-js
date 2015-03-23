@@ -1,0 +1,22 @@
+<html>
+<head>
+	<script type="text/javascript" src="devolution/devolution-framework.js"></script>
+	<script type="text/javascript" src="devolution/instructions/base.js"></script>
+</head>
+<body>
+<h1>Evolver</h1>
+<script type="text/javascript">
+	var env = new Environment();
+	env.instruction_set = new InstructionSet();
+	var testo = env.generateOrganism();
+	console.log(testo);
+	env.generateSimpleTrainingSet(1, 20, function(x) { return 2 * x + 1});
+	console.log("Running");
+	env.evolve();
+	console.log("Finished");
+	window.organism = env.retrieveBestOrganism();
+	console.log(window.organism);
+</script>
+</body>
+</html>
+
