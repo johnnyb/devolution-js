@@ -1,12 +1,14 @@
 "use strict";
 
-
 /* Copyright 2015 The Blyth Institute */
 /* See LICENSE file for terms of use */
 
 function Environment() {
 
 }
+Environment.prototype.mutation_rate = 0.05;
+Environment.prototype.deletion_mutation_rate = 0.1; // only if mutation_rate is hit
+Environment.prototype.insertion_mutation_rate = 0.02; // only if mutation_rate is NOT hit
 Environment.prototype.allow_numeric_terminals = false;
 Environment.prototype.min_numeric_terminal = 0;
 Environment.prototype.max_numeric_terminal = 10;
@@ -18,16 +20,16 @@ Environment.prototype.instruction_weights = null;
 Environment.prototype.previous_generations = null;
 Environment.prototype.keep_fittest_organisms_from_previous_generation = true;
 Environment.prototype.keep_previous_generations = false;
-Environment.prototype.num_organisms_to_evolve_per_selected_organism = 10;
+Environment.prototype.num_organisms_to_evolve_per_selected_organism = 2;
 Environment.prototype.training_set = []; // Each member is an array of input/output pairs
 Environment.prototype.organisms = null;
 Environment.prototype.evolve = function(opts) {
 	opts = opts || {};
-	var num_generations = opts.generations || 10;
+	var num_generations = opts.generations || 2;
 	var gen_cb = opts.generation_callback;
 
 	if(this.organisms == null) {
-		this.generateInitialOrganisms(10);
+		this.generateInitialOrganisms(2);
 	}
 
 	this.evaluateGeneration(opts);
@@ -40,10 +42,8 @@ Environment.prototype.evolve = function(opts) {
 	}
 };
 
-Environment.prototype.generateOrganism = function() {
-	var o = new Organism();
+Environment.prototype.generateSubtree = function() {
 	var program = [];
-
 	var env = this;
 
 	var generate_func = function(curset) {
@@ -61,7 +61,12 @@ Environment.prototype.generateOrganism = function() {
 		}
 	}
 	generate_func(program);	
-	o.program = program;
+	return program;
+};
+
+Environment.prototype.generateOrganism = function() {
+	var o = new Organism();
+	o.program = this.generateSubtree();
 
 	return o;
 };
@@ -92,9 +97,46 @@ Environment.prototype.evolveGeneration = function(opts) {
 	}
 	this.organisms = next_gen;
 }
-Environment.prototype.evolveChildren = function(organism) {
-	// FIXME
-	return [];
+Environment.prototype.copySubtreeMutating = function(subtree) {
+	if(subtree == null) {
+		console.log("ISSUE - null subtree");
+		return this.generateSubtree();
+	}
+	var new_subtree = [];
+	for(var i = 0; i < subtree.length; i++) {
+		if(Math.random() < this.mutation_rate) {
+			if(Math.random() < this.deletion_mutation_rate) {
+				// Nothing - we are deleting this node
+			} else {
+				new_subtree.push(this.generateSubtree());
+			}
+		} else {
+			var elem = subtree[i];
+			if(Array.isArray(elem)) {
+				elem = this.copySubtreeMutating(elem)
+			}
+			new_subtree.push(elem);
+		}
+		if(Math.random() < this.insertion_mutation_rate) {
+			new_subtree.push(this.generateSubtree());
+		}
+	}
+
+	return new_subtree;
+};
+Environment.prototype.evolveChildren = function(organism, num_children) {
+	if(num_children == null) {
+		num_children = this.num_organisms_to_evolve_per_selected_organism;
+	}	
+	var children = [];
+
+	for(var i = 0; i < num_children; i++) {
+		var o = new Organism();
+		o.program = this.copySubtreeMutating(organism.program);
+		children.push(o);
+	}
+
+	return children;
 };
 Environment.prototype.retrieveBestOrganism = function() {
 	var best_o = null;
@@ -118,11 +160,12 @@ Environment.prototype.findOrganismsToEvolve = function(opts) {
 	return this.findFittestOrganisms(this.num_organisms_to_select);
 };
 Environment.prototype.findFittestOrganisms = function(num_orgs) {
-	console.log(this.organisms);
 	var new_orgs = this.organisms.filter(function(o) { return o.fitness != null });
-	console.log(new_orgs);
 	new_orgs = new_orgs.sort(function(a, b) { return b.fitness - a.fitness; });
-	console.log(new_orgs);
+	console.log("GENERATION");
+	for(var i = 0; i < new_orgs.length; i++) {
+		console.log(new_orgs[i]);
+	}
 	return new_orgs.slice(0, num_orgs);
 };
 Environment.prototype.evaluateGeneration = function(opts) {

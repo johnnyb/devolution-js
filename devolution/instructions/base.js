@@ -25,7 +25,7 @@ InstructionSet.registerInstruction(new Instruction({
 		args = organism.evaluateInstructionNodes(args);
 		var idx = args[0] || 0;
 		if(organism.parameters.length > 0) {
-			param_index = args[0] % organism.parameters.length;
+			var param_index = args[0] % organism.parameters.length;
 			return organism.parameters[param_index];
 		} else {
 			return 0;
